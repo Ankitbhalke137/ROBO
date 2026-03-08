@@ -637,24 +637,12 @@ function renderTeam() {
       html += `<a href="#" class="member-social-link">${icons.linkedin}</a>`;
     if (socials?.github)
       html += `<a href="${socials.github}" class="member-social-link" target="_blank" rel="noopener">${icons.github}</a>`;
+    if (socials?.portfolio)
+      html += `<a href="${socials.portfolio}" class="member-social-link" target="_blank" rel="noopener">${icons.globe}</a>`;
     return html;
   };
 
-  const leader = teamMembers[0];
-  const leaderCard = leader ? `
-    <div style="display:flex;justify-content:center;margin-bottom:1rem">
-      <div class="card card-hover member-card reveal" style="max-width:22rem;width:100%">
-        <div class="member-avatar-wrap large">
-          <img src="${leader.image}" alt="${leader.name}" loading="lazy">
-        </div>
-        <h3 class="member-name large">${leader.name}</h3>
-        <div class="member-role large">${leader.role}</div>
-        <p class="member-bio">${leader.bio}</p>
-        <div class="member-socials">${socialLinks(leader.socials)}</div>
-      </div>
-    </div>` : '';
-
-  const coreCards = teamMembers.slice(1).map(m => `
+  const coreCards = teamMembers.map(m => `
     <div class="card card-hover member-card reveal">
       <div class="member-avatar-wrap default">
         <img src="${m.image}" alt="${m.name}" loading="lazy">
@@ -674,10 +662,7 @@ function renderTeam() {
         <h1>Meet the Team</h1>
         <p>The minds behind the machines. A diverse team of engineers, dreamers and builders.</p>
       </div>
-      <div style="display:grid;gap:2.5rem" class="animate-slide-up">
-        ${leaderCard}
-        <div class="team-grid">${coreCards}</div>
-      </div>
+      <div class="team-grid animate-slide-up">${coreCards}</div>
     </div>
   </div>`;
 }
