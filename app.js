@@ -4,7 +4,8 @@
    ========================================= */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { getAnalytics, logEvent } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
+import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, limit, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
 import firebaseConfig from "./firebase-config.js";
@@ -12,6 +13,7 @@ import firebaseConfig from "./firebase-config.js";
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
+const analytics = getAnalytics(app);
 
 let isAdmin = false;
 let projects = [];
@@ -779,7 +781,7 @@ function renderContact() {
         <p>Interested in joining, sponsoring or collaborating? Reach out — we'd love to hear from you.</p>
       </div>
       <div class="contact-grid animate-slide-up">
-        <!-- Info -->
+        <!-- Info & Responses -->
         <div>
           <div style="display:flex;flex-direction:column;gap:1rem;margin-bottom:2rem">
             <div class="card contact-info-card">
@@ -790,60 +792,48 @@ function renderContact() {
               </div>
             </div>
             <div class="card contact-info-card">
-              <span class="contact-info-icon">${icons.phone}</span>
-              <div>
-                <div class="contact-info-title">Phone</div>
-                <div class="contact-info-value">+91 98765 43210</div>
-              </div>
-            </div>
-            <div class="card contact-info-card">
               <span class="contact-info-icon">${icons.mapPin}</span>
               <div>
-                <div class="contact-info-title">Lab Location — Pune Campus</div>
-                <div class="contact-info-value">Survey No. 32, Amar Manor, 4th Floor, Unit No. 302, Hadapsar, Pune, Maharashtra 411013</div>
+                <div class="contact-info-title">Lab Location</div>
+                <div class="contact-info-value">PW IOI Pune Campus</div>
               </div>
             </div>
           </div>
+          
+          <!-- Public Responses Feed -->
+          <div class="card" style="margin-bottom:2rem; padding: 1.5rem;">
+            <h3 style="color: var(--primary); font-family: var(--font-display); font-size: 1.1rem; margin-bottom: 1rem;">Recent Community Interest</h3>
+            <div id="public-responses-list" style="max-height: 300px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.75rem;">
+              <p style="color:var(--text-dim); font-size: 0.85rem;">Loading activity...</p>
+            </div>
+          </div>
+
           <!-- Terminal widget -->
           <div class="terminal-block">
             <span class="terminal-line-green">$ ./join-club --apply</span><br>
-            <span class="terminal-line-blue">> Fill the form →</span><br>
+            <span class="terminal-line-blue">> Use the Google Form →</span><br>
             <span class="terminal-line-purple">> Await confirmation</span><br>
             <span class="terminal-line-green">> Welcome aboard! 🤖</span><br>
             <span style="color:var(--text-dim)">_<span class="terminal-cursor"></span></span>
           </div>
         </div>
-        <!-- Form -->
-        <div class="card contact-form-card">
-          <form id="contact-form">
-            <div class="form-row">
-              <div>
-                <label class="form-label">Name</label>
-                <input type="text" class="form-input" id="f-name" placeholder="Ankit Bhalke" required>
-              </div>
-              <div>
-                <label class="form-label">Email</label>
-                <input type="email" class="form-input" id="f-email" placeholder="you@example.com" required>
-              </div>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Reason for Joining</label>
-              <select class="form-input form-select" id="f-reason">
-                <option value="">Select an option</option>
-                <option>Join as a Member</option>
-                <option>Sponsorship / Partnership</option>
-                <option>Research Collaboration</option>
-                <option>General Inquiry</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Message</label>
-              <textarea class="form-textarea" id="f-message" rows="5" placeholder="Tell us about your skills and what excites you about robotics..."></textarea>
-            </div>
-            <button type="submit" class="btn btn-primary btn-lg form-submit">
-              Send Message ${icons.arrowRight}
-            </button>
-          </form>
+
+        <!-- Google Form Embed -->
+        <div class="iframe-container animate-fade-in" style="min-height: 800px;">
+          <div class="iframe-loading-placeholder" id="iframe-loader">
+            <div class="iframe-loading-spinner"></div>
+            <div style="letter-spacing: 0.2em; font-size: 0.75rem; text-transform: uppercase;">Booting Form System...</div>
+          </div>
+          <iframe 
+            <iframe src="https://docs.google.com/forms/d/e/1FAIpQLSfcXYZeYOo0GBIA61PrxkQ5XXLzkY9FhrtiCieFVYyhyCBaog/viewform?embedded=true" 
+            width="100%" 
+            height="800" 
+            frameborder="0" 
+            marginheight="0" 
+            marginwidth="0"
+            style="border: none; opacity: 0;"
+            onload="this.style.opacity='1'; document.getElementById('iframe-loader').style.display='none';"
+          >Loading…</iframe>
         </div>
       </div>
     </div>
@@ -994,35 +984,45 @@ function animateCounters() {
   });
 }
 
-// ── Contact Form ──────────────────────────
+// ── Contact Form & Public Feed ──────────────
 function initContactForm() {
-  const form = document.getElementById('contact-form');
-  if (!form) return;
-  form.addEventListener('submit', async e => {
-    e.preventDefault();
-    const btn = form.querySelector('.form-submit');
-    const originalText = btn.innerHTML;
-    btn.innerHTML = 'Sending...';
-    btn.disabled = true;
+  loadPublicResponses();
+}
 
-    try {
-      await addDoc(collection(db, 'requests'), {
-        name: document.getElementById('f-name').value,
-        email: document.getElementById('f-email').value,
-        reason: document.getElementById('f-reason').value,
-        message: document.getElementById('f-message').value,
-        timestamp: new Date()
-      });
-      showToast('✅ Request sent successfully! We\'ll be in touch soon.');
-      form.reset();
-    } catch (err) {
-      console.error(err);
-      showToast('❌ Error sending request. Please try again.');
-    } finally {
-      btn.innerHTML = originalText;
-      btn.disabled = false;
+async function loadPublicResponses() {
+  const list = document.getElementById('public-responses-list');
+  if (!list) return;
+  try {
+    // Fetch latest 5 requests to show public interest
+    const q = query(collection(db, 'requests'), orderBy('timestamp', 'desc'), limit(5));
+    const qs = await getDocs(q);
+
+    if (qs.empty) {
+      list.innerHTML = '<p style="color:var(--text-dim); font-size: 0.85rem;">No recent activity yet. Be the first!</p>';
+      return;
     }
-  });
+
+    list.innerHTML = '';
+    qs.forEach(docSnap => {
+      const d = docSnap.data();
+      // Anonymize name for public view if needed, or just show first name
+      const displayName = d.name.split(' ')[0] || 'Anonymous';
+      const timeStr = d.timestamp ? d.timestamp.toDate().toLocaleDateString() : 'Recently';
+
+      list.innerHTML += `
+        <div style="background: rgba(255,255,255,0.03); padding: 0.75rem; border-radius: 8px; border-left: 2px solid var(--primary);">
+          <div style="display:flex; justify-content:space-between; font-size: 0.8rem; margin-bottom: 0.25rem;">
+            <strong style="color: var(--primary);">${displayName}</strong>
+            <span style="color: var(--text-dim);">${timeStr}</span>
+          </div>
+          <div style="color: var(--text-muted); font-size: 0.75rem; font-family: var(--font-mono);">${d.reason}</div>
+        </div>
+      `;
+    });
+  } catch (err) {
+    console.error("Public Feed Error:", err);
+    list.innerHTML = '<p style="color:var(--text-dim); font-size: 0.85rem;">Interested people are reaching out!</p>';
+  }
 }
 
 function showToast(msg) {
