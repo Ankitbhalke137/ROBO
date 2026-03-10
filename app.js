@@ -3,22 +3,84 @@
    Modernized Vanilla JavaScript SPA
    ========================================= */
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getAnalytics, logEvent } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
-import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, limit, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+// ── Data ──────────────────────────────────
+// Static Data for Pure Static Site
 
-import firebaseConfig from "./firebase-config.js";
+const projectsData = [
+  {
+    id: '1',
+    title: 'Autonomous Rover X-1',
+    category: 'Autonomous Robotics',
+    description: 'A multi-terrain rover equipped with LiDAR and computer vision for autonomous navigation and pathfinding.',
+    image: 'https://images.unsplash.com/photo-1581092580497-e0d23cbdf1dc?auto=format&fit=crop&q=80&w=600',
+    year: '2024',
+    status: 'active'
+  },
+  {
+    id: '2',
+    title: 'Bipedal Balance Bot',
+    category: 'Embedded Systems',
+    description: 'A two-legged robot utilizing PID control systems for dynamic stability and fluid motion.',
+    image: 'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?auto=format&fit=crop&q=80&w=600',
+    year: '2023',
+    status: 'completed'
+  },
+  {
+    id: '3',
+    title: 'DeepVision SLAM',
+    category: 'AI & Machine Vision',
+    description: 'Real-time mapping and localization system using deep learning for feature extraction and loop closure.',
+    image: 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&q=80&w=600',
+    year: '2024',
+    status: 'active'
+  }
+];
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const auth = getAuth(app);
-const analytics = getAnalytics(app);
+const teamData = [
+  {
+    id: '1',
+    name: 'Ankit Bhalke',
+    role: 'Club Lead',
+    bio: 'Robotics enthusiast with a passion for building autonomous systems and fostering an innovation-driven community.',
+    image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=400',
+    socials: { linkedin: '#', github: '#', portfolio: '#' }
+  },
+  {
+    id: '2',
+    name: 'Sarah Chen',
+    role: 'Hardware Lead',
+    bio: 'Mechanical engineer specialized in precision mechanism design and rapid prototyping for competitive robotics.',
+    image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=400',
+    socials: { linkedin: '#', github: '#' }
+  }
+];
 
-let isAdmin = false;
-let projects = [];
-let teamMembers = [];
-let equipment = [];
+const equipmentData = [
+  {
+    id: '1',
+    name: 'Arduino Mega 2560',
+    category: 'Controllers',
+    description: 'The classic large-format microcontroller for complex robotics projects needing many I/O pins.',
+    image: 'https://images.unsplash.com/photo-1553406830-ef2513450d76?auto=format&fit=crop&q=80&w=400',
+    qty: 5,
+    status: 'available',
+    specs: ['ATmega2560', '54 Digital I/O', '16 Analog Inputs', '256KB Flash']
+  },
+  {
+    id: '2',
+    name: 'Jetson Nano Developer Kit',
+    category: 'AI/ML Compute',
+    description: 'Edge AI platform for advanced machine vision and deep learning applications on robots.',
+    image: 'https://images.unsplash.com/photo-1555664424-778a1e5e1b48?auto=format&fit=crop&q=80&w=400',
+    qty: 2,
+    status: 'in-use',
+    specs: ['128-core Maxwell GPU', 'Quad-core ARM A57', '4GB LPDDR4', '4K Support']
+  }
+];
+
+let projects = projectsData;
+let teamMembers = teamData;
+let equipment = equipmentData;
 
 // ── Data ──────────────────────────────────
 // Data will be fetched from Firestore
@@ -294,7 +356,6 @@ function renderNavbar() {
       </a>
       <div class="nav-links">
         ${desktopLinks}
-        <button id="nav-admin-btn" class="btn btn-outline btn-sm" style="display:none;" data-nav="admin">Dashboard</button>
         <button class="btn btn-primary btn-sm" data-nav="contact">Join Club</button>
       </div>
       <button class="nav-toggle" id="nav-toggle">${icons.menu}</button>
@@ -340,7 +401,7 @@ function renderFooter() {
       </div>
     </div>
     <div class="container-custom footer-bottom">
-      <span class="footer-bottom-text">&copy; ${new Date().getFullYear()} Robotics Club @ PW IOI Pune Campus. All rights reserved. <a href="#" id="open-admin-login" style="opacity:0.2;">Admin</a></span>
+      <span class="footer-bottom-text">&copy; ${new Date().getFullYear()} Robotics Club @ PW IOI Pune Campus. All rights reserved.</span>
       <span class="footer-bottom-badge">
         <span class="footer-bottom-dot"></span>
         Systems Online
@@ -800,13 +861,6 @@ function renderContact() {
             </div>
           </div>
           
-          <!-- Public Responses Feed -->
-          <div class="card" style="margin-bottom:2rem; padding: 1.5rem;">
-            <h3 style="color: var(--primary); font-family: var(--font-display); font-size: 1.1rem; margin-bottom: 1rem;">Recent Community Interest</h3>
-            <div id="public-responses-list" style="max-height: 300px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.75rem;">
-              <p style="color:var(--text-dim); font-size: 0.85rem;">Loading activity...</p>
-            </div>
-          </div>
 
           <!-- Terminal widget -->
           <div class="terminal-block">
@@ -986,44 +1040,9 @@ function animateCounters() {
 
 // ── Contact Form & Public Feed ──────────────
 function initContactForm() {
-  loadPublicResponses();
+  // No-op for static site
 }
 
-async function loadPublicResponses() {
-  const list = document.getElementById('public-responses-list');
-  if (!list) return;
-  try {
-    // Fetch latest 5 requests to show public interest
-    const q = query(collection(db, 'requests'), orderBy('timestamp', 'desc'), limit(5));
-    const qs = await getDocs(q);
-
-    if (qs.empty) {
-      list.innerHTML = '<p style="color:var(--text-dim); font-size: 0.85rem;">No recent activity yet. Be the first!</p>';
-      return;
-    }
-
-    list.innerHTML = '';
-    qs.forEach(docSnap => {
-      const d = docSnap.data();
-      // Anonymize name for public view if needed, or just show first name
-      const displayName = d.name.split(' ')[0] || 'Anonymous';
-      const timeStr = d.timestamp ? d.timestamp.toDate().toLocaleDateString() : 'Recently';
-
-      list.innerHTML += `
-        <div style="background: rgba(255,255,255,0.03); padding: 0.75rem; border-radius: 8px; border-left: 2px solid var(--primary);">
-          <div style="display:flex; justify-content:space-between; font-size: 0.8rem; margin-bottom: 0.25rem;">
-            <strong style="color: var(--primary);">${displayName}</strong>
-            <span style="color: var(--text-dim);">${timeStr}</span>
-          </div>
-          <div style="color: var(--text-muted); font-size: 0.75rem; font-family: var(--font-mono);">${d.reason}</div>
-        </div>
-      `;
-    });
-  } catch (err) {
-    console.error("Public Feed Error:", err);
-    list.innerHTML = '<p style="color:var(--text-dim); font-size: 0.85rem;">Interested people are reaching out!</p>';
-  }
-}
 
 function showToast(msg) {
   const existing = document.querySelector('.toast');
@@ -1054,41 +1073,8 @@ document.addEventListener('DOMContentLoaded', () => {
     '</main>' +
     renderFooter();
 
-  // Admin Modals Logic
-  const loginModal = document.getElementById('admin-login-modal');
-  const dashModal = document.getElementById('admin-dashboard-modal');
-  const closeLogin = document.getElementById('close-login');
-  const closeDash = document.getElementById('close-dashboard');
-  const openLogin = document.getElementById('open-admin-login');
-  const loginError = document.getElementById('admin-login-error');
+  // No-op for static site
 
-  if (openLogin) openLogin.addEventListener('click', e => { e.preventDefault(); loginModal.style.display = 'flex'; });
-  if (closeLogin) closeLogin.addEventListener('click', () => loginModal.style.display = 'none');
-  if (closeDash) closeDash.addEventListener('click', () => dashModal.style.display = 'none');
-
-  document.getElementById('admin-login-form')?.addEventListener('submit', async e => {
-    e.preventDefault();
-    const email = document.getElementById('admin-email').value;
-    const pass = document.getElementById('admin-pass').value;
-    loginError.style.display = 'none';
-    try {
-      await signInWithEmailAndPassword(auth, email, pass);
-      loginModal.style.display = 'none';
-      showToast('✅ Logged in as Admin');
-    } catch (err) {
-      console.error("Firebase Login Error:", err);
-      loginError.textContent = err.code === 'auth/invalid-api-key'
-        ? 'Invalid API Key. Please check firebase-config.js'
-        : 'Invalid credentials or connection error';
-      loginError.style.display = 'block';
-    }
-  });
-
-  document.getElementById('admin-logout-btn')?.addEventListener('click', () => {
-    signOut(auth);
-    dashModal.style.display = 'none';
-    showToast('Logged out');
-  });
 
   function refreshPageUI(pageId, contentHTML, initHook) {
     const oldPage = document.getElementById(pageId);
@@ -1109,67 +1095,8 @@ document.addEventListener('DOMContentLoaded', () => {
     refreshPageUI('lab-page', renderLab(), initLabFilter);
   }
 
-  onAuthStateChanged(auth, user => {
-    isAdmin = !!user;
-    const navAdminBtn = document.getElementById('nav-admin-btn');
-    if (navAdminBtn) navAdminBtn.style.display = isAdmin ? 'var(--display-inline-flex, inline-flex)' : 'none';
 
-    if (isAdmin) {
-      loadAdminRequests();
-    }
-    reRenderCMSPages();
-  });
 
-  let cmsLoaded = false;
-  async function loadCMSData() {
-    if (cmsLoaded) return;
-    cmsLoaded = true;
-    // Real-time listeners for dynamic content
-    onSnapshot(collection(db, 'projects'), (snapshot) => {
-      projects = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      refreshPageUI('projects-page', renderProjects(), initProjectFilter);
-    });
-
-    onSnapshot(collection(db, 'team'), (snapshot) => {
-      teamMembers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      refreshPageUI('team-page', renderTeam(), null);
-    });
-
-    onSnapshot(collection(db, 'inventory'), (snapshot) => {
-      equipment = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      refreshPageUI('lab-page', renderLab(), initLabFilter);
-    });
-  }
-  loadCMSData();
-
-  async function loadAdminRequests() {
-    const list = document.getElementById('admin-requests-list');
-    if (!list) return;
-    try {
-      const qs = await getDocs(collection(db, 'requests'));
-      if (qs.empty) {
-        list.innerHTML = '<p style="color:var(--text-muted)">No requests found.</p>';
-        return;
-      }
-      list.innerHTML = '';
-      qs.forEach(docSnap => {
-        const d = docSnap.data();
-        list.innerHTML += `
-          <div class="card" style="padding:1rem;">
-            <div style="display:flex;justify-content:space-between;margin-bottom:0.5rem;">
-              <strong style="color:var(--primary)">${d.name} (${d.email})</strong>
-              <small style="color:var(--text-muted)">${d.timestamp?.toDate().toLocaleDateString()}</small>
-            </div>
-            <div style="color:var(--secondary);margin-bottom:0.5rem;">Reason: ${d.reason}</div>
-            <p style="font-size:0.9rem;">${d.message}</p>
-          </div>
-        `;
-      });
-    } catch (err) {
-      console.error(err);
-      list.innerHTML = '<p style="color:red">Failed to load requests. Verify your Firebase config.</p>';
-    }
-  }
 
   // Delegate all nav clicks (including generic navigation buttons)
   document.addEventListener('click', e => {
