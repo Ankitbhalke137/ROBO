@@ -113,9 +113,39 @@ async function fetchTeamData() {
   }
 }
 
+async function fetchEquipmentData() {
+  try {
+    if (typeof firebase === 'undefined' || !firebase.firestore) return;
+    const db = firebase.firestore();
+    const snapshot = await db.collection('items').get();
+    if (!snapshot.empty) {
+      equipment = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      const oldPage = document.getElementById('lab-page');
+      if (oldPage) {
+        oldPage.outerHTML = renderLab();
+        if (currentPage === 'lab') {
+          const newPage = document.getElementById('lab-page');
+          if (newPage) {
+            newPage.classList.add('active', 'animate-fade-in');
+            if (typeof initLabFilter === 'function') initLabFilter();
+            if (typeof initReveal === 'function') initReveal();
+            if (typeof init3DCardTilt === 'function') init3DCardTilt();
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.error("Error fetching items:", err);
+  }
+}
+
 function initFirestoreFetches() {
   if (typeof firebase !== 'undefined' && firebase.firestore) {
     fetchTeamData();
+    fetchEquipmentData();
   } else {
     setTimeout(initFirestoreFetches, 50);
   }
