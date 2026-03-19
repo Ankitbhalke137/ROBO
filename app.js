@@ -85,6 +85,42 @@ let equipment = equipmentData;
 // ── Data ──────────────────────────────────
 // Data will be fetched from Firestore
 
+async function fetchTeamData() {
+  try {
+    if (typeof firebase === 'undefined' || !firebase.firestore) return;
+    const db = firebase.firestore();
+    const snapshot = await db.collection('team').get();
+    if (!snapshot.empty) {
+      teamMembers = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      const oldPage = document.getElementById('team-page');
+      if (oldPage) {
+        oldPage.outerHTML = renderTeam();
+        if (currentPage === 'team') {
+          const newPage = document.getElementById('team-page');
+          if (newPage) {
+            newPage.classList.add('active', 'animate-fade-in');
+            if (typeof initReveal === 'function') initReveal();
+            if (typeof init3DCardTilt === 'function') init3DCardTilt();
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.error("Error fetching team:", err);
+  }
+}
+
+function initFirestoreFetches() {
+  if (typeof firebase !== 'undefined' && firebase.firestore) {
+    fetchTeamData();
+  } else {
+    setTimeout(initFirestoreFetches, 50);
+  }
+}
+initFirestoreFetches();
 const scheduleData = [
   {
     month: 'March',
@@ -392,11 +428,11 @@ function renderFooter() {
         <div class="footer-socials">
           <a href="#" class="footer-social-link" title="GitHub">${icons.github}</a>
           <a href="#" class="footer-social-link" title="LinkedIn">${icons.linkedin}</a>
-          <a href="#" class="footer-social-link" title="Instagram">${icons.instagram}</a>
+          <a href="https://www.instagram.com/robotic_pwioi_pune/?utm_source=ig_web_button_share_sheet" class="footer-social-link" title="Instagram">${icons.instagram}</a>
           <a href="#" class="footer-social-link" title="Twitter">${icons.twitter}</a>
         </div>
-        <a href="mailto:info@roboticsclub.edu" class="footer-email">
-          ${icons.mail}&nbsp; info@roboticsclub.edu
+        <a href="mailto:roboticsclubioipune@gmail.com" class="footer-email">
+          ${icons.mail}&nbsp; roboticsclubioipune@gmail.com
         </a>
       </div>
     </div>
@@ -849,7 +885,7 @@ function renderContact() {
               <span class="contact-info-icon">${icons.mail}</span>
               <div>
                 <div class="contact-info-title">Email</div>
-                <div class="contact-info-value">contact@roboticsclub.edu</div>
+                <div class="contact-info-value">roboticsclubioipune@gmail.com</div>
               </div>
             </div>
             <div class="card contact-info-card">
